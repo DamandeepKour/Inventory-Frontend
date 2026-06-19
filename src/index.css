@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+body {
+  @apply bg-gray-50 text-gray-900 antialiased;
+}
+
+#root {
+  @apply min-h-screen;
+}
+
+input:focus-visible,
+select:focus-visible,
+button:focus-visible {
+  @apply outline-none ring-2 ring-gray-900/20 ring-offset-1;
+}
