@@ -11,7 +11,7 @@ import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import Modal from '../../components/ui/Modal';
 import PageHeader from '../../components/ui/PageHeader';
 import PageStateMessage from '../../components/ui/PageStateMessage';
-import { TableActionCell, TableActionHeader } from '../../components/ui/TableActions';
+import { TableActionCell, TableActionHeader, TableIndexCell, TableIndexHeader } from '../../components/ui/TableActions';
 import { useRefresh } from '../../context/RefreshContext';
 import { notifyError, notifySuccess, notifyValidationErrors } from '../../utils/toast';
 import { hasErrors, validateOrderForm } from '../../utils/validation';
@@ -68,7 +68,17 @@ export default function Orders() {
     }, 0);
   }, [items, products]);
 
-  const productName = (id) => products.find((p) => p.id === id)?.name || id.slice(0, 8);
+  const productName = (id) => products.find((p) => p.id === id)?.name || '—';
+
+  const productSku = (id) => products.find((p) => p.id === id)?.sku || '—';
+
+  const orderSkus = (order) => {
+    if (!order.items?.length) return '—';
+    const skus = order.items
+      .map((item) => products.find((p) => p.id === item.product_id)?.sku)
+      .filter(Boolean);
+    return skus.length ? skus.join(', ') : '—';
+  };
 
   const revalidate = (nextCustomerId, nextItems) => {
     const errors = validateOrderForm(nextCustomerId, nextItems, products);
@@ -319,7 +329,8 @@ export default function Orders() {
             <table className="w-full min-w-[600px] text-sm">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-100">
-                  <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500">ORDER</th>
+                  <TableIndexHeader />
+                  <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500">SKU</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500">CUSTOMER</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500">TOTAL</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500">DATE</th>
@@ -327,11 +338,12 @@ export default function Orders() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((o) => {
+                {orders.map((o, idx) => {
                   const customer = customers.find((c) => c.id === o.customer_id);
                   return (
                     <tr key={o.id} className="border-b border-gray-100 transition hover:bg-gray-50/80 last:border-0">
-                      <td className="px-5 py-4 font-medium text-gray-900">{o.id.slice(0, 8)}…</td>
+                      <TableIndexCell index={idx + 1} />
+                      <td className="px-5 py-4 font-medium text-gray-900">{orderSkus(o)}</td>
                       <td className="px-5 py-4 text-gray-700">{customer?.full_name || '—'}</td>
                       <td className="px-5 py-4 text-gray-700">${Number(o.total_amount).toFixed(2)}</td>
                       <td className="px-5 py-4 text-gray-700">{new Date(o.created_at).toLocaleDateString()}</td>
@@ -370,11 +382,16 @@ export default function Orders() {
             <div>
               <p className="mb-2 text-xs font-semibold tracking-wide text-gray-500">ITEMS</p>
               <div className="overflow-hidden rounded-lg border border-gray-200">
-                {detailOrder.items?.map((item) => (
+                {detailOrder.items?.map((item, idx) => (
                   <div key={item.id} className="flex items-center justify-between border-b border-gray-100 px-4 py-3 last:border-0">
                     <div>
-                      <p className="font-medium text-gray-900">{productName(item.product_id)}</p>
-                      <p className="text-gray-500">Qty: {item.quantity}</p>
+                      <p className="font-medium text-gray-900">
+                        <span className="text-gray-500">#{idx + 1}</span>{' '}
+                        {productName(item.product_id)}
+                      </p>
+                      <p className="text-gray-500">
+                        SKU: {productSku(item.product_id)} · Qty: {item.quantity}
+                      </p>
                     </div>
                     <p className="font-medium text-gray-900">${(Number(item.price) * item.quantity).toFixed(2)}</p>
                   </div>

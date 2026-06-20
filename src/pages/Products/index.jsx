@@ -9,7 +9,7 @@ import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import Modal from '../../components/ui/Modal';
 import PageHeader from '../../components/ui/PageHeader';
 import PageStateMessage from '../../components/ui/PageStateMessage';
-import { TableActionCell, TableActionHeader } from '../../components/ui/TableActions';
+import { TableActionCell, TableActionHeader, TableIndexCell, TableIndexHeader } from '../../components/ui/TableActions';
 import { useRefresh } from '../../context/RefreshContext';
 import { useFormValidation } from '../../hooks/useFormValidation';
 import { notifyError, notifySuccess, notifyValidationErrors } from '../../utils/toast';
@@ -169,20 +169,22 @@ export default function Products() {
           <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-100">
-                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500">NAME</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500">SKU</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500">PRICE</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500">STOCK</th>
+                <TableIndexHeader />
+                <th className="px-2 py-2 text-left text-xs font-semibold tracking-wide text-gray-500">NAME</th>
+                <th className="px-2 py-2 text-left text-xs font-semibold tracking-wide text-gray-500">SKU</th>
+                <th className="px-2 py-2 text-left text-xs font-semibold tracking-wide text-gray-500">PRICE</th>
+                <th className="px-2 py-2 text-left text-xs font-semibold tracking-wide text-gray-500">STOCK</th>
                 <TableActionHeader />
               </tr>
             </thead>
             <tbody>
-              {products.map((p) => (
+              {products.map((p, idx) => (
                 <tr key={p.id} className="border-b border-gray-100 transition hover:bg-gray-50/80 last:border-0">
-                  <td className="px-5 py-4 font-semibold text-gray-900">{p.name}</td>
-                  <td className="px-5 py-4 text-gray-700">{p.sku}</td>
-                  <td className="px-5 py-4 text-gray-700">${Number(p.price).toFixed(2)}</td>
-                  <td className="px-5 py-4 text-gray-700">{p.quantity}</td>
+                  <TableIndexCell index={idx + 1} />
+                  <td className="px-2 py-2 font-semibold text-gray-900">{p.name}</td>
+                  <td className="px-2 py-2 text-gray-700">{p.sku}</td>
+                  <td className="px-2 py-2 text-gray-700">${Number(p.price).toFixed(2)}</td>
+                  <td className="px-2 py-2 text-gray-700">{p.quantity}</td>
                   <TableActionCell>
                     <IconActionButton label="Edit product" variant="edit" onClick={() => openEdit(p)}>
                       <FiEdit2 className="h-4 w-4" />
