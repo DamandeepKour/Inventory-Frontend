@@ -1,12 +1,15 @@
-const indexHeaderClass =
-  'w-14 px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500';
+export const tableThClass =
+  'px-4 py-2 text-left text-xs font-semibold tracking-wide text-gray-500';
 
-const indexCellClass = 'px-5 py-4 text-sm font-medium text-gray-500';
+export const tableTdClass = 'px-4 py-2 text-sm';
 
-const actionHeaderClass =
-  'px-5 py-3 text-right text-xs font-semibold tracking-wide text-gray-500';
+const indexHeaderClass = `w-12 ${tableThClass}`;
 
-const actionCellClass = 'px-5 py-4 text-right';
+const indexCellClass = `${tableTdClass} font-medium text-gray-500`;
+
+const actionHeaderClass = `${tableThClass} text-right`;
+
+const actionCellClass = `${tableTdClass} text-right`;
 
 export function TableIndexHeader({ label = '#' }) {
   return <th className={indexHeaderClass}>{label}</th>;
@@ -23,7 +26,7 @@ export function TableActionHeader({ label = 'ACTION' }) {
 export function TableActionCell({ children }) {
   return (
     <td className={actionCellClass}>
-      <div className="flex items-center justify-end gap-2">{children}</div>
+      <div className="flex items-center justify-end gap-1">{children}</div>
     </td>
   );
 }

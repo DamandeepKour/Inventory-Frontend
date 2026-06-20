@@ -12,7 +12,7 @@ export function IconActionButton({ label, onClick, children, variant = 'default'
       onClick={onClick}
       title={label}
       aria-label={label}
-      className={`rounded-lg p-2 transition ${variants[variant] || variants.default}`}
+      className={`rounded-lg p-1.5 transition ${variants[variant] || variants.default}`}
     >
       {children}
     </button>

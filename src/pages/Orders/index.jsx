@@ -11,7 +11,7 @@ import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import Modal from '../../components/ui/Modal';
 import PageHeader from '../../components/ui/PageHeader';
 import PageStateMessage from '../../components/ui/PageStateMessage';
-import { TableActionCell, TableActionHeader, TableIndexCell, TableIndexHeader } from '../../components/ui/TableActions';
+import { TableActionCell, TableActionHeader, TableIndexCell, TableIndexHeader, tableTdClass, tableThClass } from '../../components/ui/TableActions';
 import { useRefresh } from '../../context/RefreshContext';
 import { notifyError, notifySuccess, notifyValidationErrors } from '../../utils/toast';
 import { hasErrors, validateOrderForm } from '../../utils/validation';
@@ -330,10 +330,10 @@ export default function Orders() {
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-100">
                   <TableIndexHeader />
-                  <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500">SKU</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500">CUSTOMER</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500">TOTAL</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500">DATE</th>
+                  <th className={tableThClass}>SKU</th>
+                  <th className={tableThClass}>CUSTOMER</th>
+                  <th className={tableThClass}>TOTAL</th>
+                  <th className={tableThClass}>DATE</th>
                   <TableActionHeader />
                 </tr>
               </thead>
@@ -343,10 +343,10 @@ export default function Orders() {
                   return (
                     <tr key={o.id} className="border-b border-gray-100 transition hover:bg-gray-50/80 last:border-0">
                       <TableIndexCell index={idx + 1} />
-                      <td className="px-5 py-4 font-medium text-gray-900">{orderSkus(o)}</td>
-                      <td className="px-5 py-4 text-gray-700">{customer?.full_name || '—'}</td>
-                      <td className="px-5 py-4 text-gray-700">${Number(o.total_amount).toFixed(2)}</td>
-                      <td className="px-5 py-4 text-gray-700">{new Date(o.created_at).toLocaleDateString()}</td>
+                      <td className={`${tableTdClass} font-medium text-gray-900`}>{orderSkus(o)}</td>
+                      <td className={`${tableTdClass} text-gray-700`}>{customer?.full_name || '—'}</td>
+                      <td className={`${tableTdClass} text-gray-700`}>${Number(o.total_amount).toFixed(2)}</td>
+                      <td className={`${tableTdClass} text-gray-700`}>{new Date(o.created_at).toLocaleDateString()}</td>
                       <TableActionCell>
                         <IconActionButton label="View order" variant="view" onClick={() => openDetail(o.id)}>
                           <FiEye className="h-4 w-4" />

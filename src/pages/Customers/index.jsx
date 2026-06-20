@@ -9,7 +9,7 @@ import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import Modal from '../../components/ui/Modal';
 import PageHeader from '../../components/ui/PageHeader';
 import PageStateMessage from '../../components/ui/PageStateMessage';
-import { TableActionCell, TableActionHeader, TableIndexCell, TableIndexHeader } from '../../components/ui/TableActions';
+import { TableActionCell, TableActionHeader, TableIndexCell, TableIndexHeader, tableTdClass, tableThClass } from '../../components/ui/TableActions';
 import { useRefresh } from '../../context/RefreshContext';
 import { useFormValidation } from '../../hooks/useFormValidation';
 import { notifyError, notifySuccess, notifyValidationErrors } from '../../utils/toast';
@@ -184,9 +184,9 @@ export default function Customers() {
             <thead>
               <tr className="border-b border-gray-200 bg-gray-100">
                 <TableIndexHeader />
-                <th className="px-2 py-2 text-left text-xs font-semibold tracking-wide text-gray-500">NAME</th>
-                <th className="px-2 py-2 text-left text-xs font-semibold tracking-wide text-gray-500">EMAIL</th>
-                <th className="px-2 py-2 text-left text-xs font-semibold tracking-wide text-gray-500">PHONE</th>
+                <th className={tableThClass}>NAME</th>
+                <th className={tableThClass}>EMAIL</th>
+                <th className={tableThClass}>PHONE</th>
                 <TableActionHeader />
               </tr>
             </thead>
@@ -194,9 +194,9 @@ export default function Customers() {
               {customers.map((c, idx) => (
                 <tr key={c.id} className="border-b border-gray-100 transition hover:bg-gray-50/80 last:border-0">
                   <TableIndexCell index={idx + 1} />
-                  <td className="px-2 py-2 font-semibold text-gray-900">{c.full_name}</td>
-                  <td className="px-2 py-2 text-gray-700">{c.email}</td>
-                  <td className="px-2 py-2 text-gray-700">{c.phone || '—'}</td>
+                  <td className={`${tableTdClass} font-semibold text-gray-900`}>{c.full_name}</td>
+                  <td className={`${tableTdClass} text-gray-700`}>{c.email}</td>
+                  <td className={`${tableTdClass} text-gray-700`}>{c.phone || '—'}</td>
                   <TableActionCell>
                     <IconActionButton label="View customer" variant="view" onClick={() => openView(c.id)}>
                       <FiEye className="h-4 w-4" />
