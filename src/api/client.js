@@ -8,8 +8,16 @@ async function request(path, options = {}) {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    const msg = body.message || body.detail || `Request failed (${res.status})`;
-    throw new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+    const detail = body.message || body.detail;
+    let msg;
+    if (typeof detail === 'string') {
+      msg = detail;
+    } else if (Array.isArray(detail)) {
+      msg = detail.map((d) => d.msg || d.message).filter(Boolean).join(', ') || `Error ${res.status}`;
+    } else {
+      msg = `Error ${res.status}${res.statusText ? `: ${res.statusText}` : ''}`;
+    }
+    throw new Error(msg);
   }
 
   if (res.status === 204) return null;

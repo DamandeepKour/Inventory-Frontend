@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FiEye, FiTrash2 } from 'react-icons/fi';
 import { api } from '../../api/client';
-import Alert from '../../components/ui/Alert';
 import Button from '../../components/ui/Button';
+import ConfirmDeleteModal from '../../components/ui/ConfirmDeleteModal';
 import FieldError from '../../components/ui/FieldError';
 import FloatingInput from '../../components/ui/FloatingInput';
 import FloatingSelect from '../../components/ui/FloatingSelect';
@@ -10,8 +10,10 @@ import { IconActionButton } from '../../components/ui/IconActionButton';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import Modal from '../../components/ui/Modal';
 import PageHeader from '../../components/ui/PageHeader';
+import PageStateMessage from '../../components/ui/PageStateMessage';
 import { TableActionCell, TableActionHeader } from '../../components/ui/TableActions';
 import { useRefresh } from '../../context/RefreshContext';
+import { notifyError, notifySuccess, notifyValidationErrors } from '../../utils/toast';
 import { hasErrors, validateOrderForm } from '../../utils/validation';
 
 export default function Orders() {
@@ -22,14 +24,17 @@ export default function Orders() {
   const [customerId, setCustomerId] = useState('');
   const [items, setItems] = useState([]);
   const [formErrors, setFormErrors] = useState({});
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [detailOrder, setDetailOrder] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
   const load = async () => {
+    setLoading(true);
+    setLoadError('');
     try {
       const [o, c, p] = await Promise.all([
         api.getOrders(),
@@ -40,8 +45,12 @@ export default function Orders() {
       setCustomers(c);
       setProducts(p);
       if (c.length && !customerId) setCustomerId(c[0].id);
+      setLoadError('');
     } catch (e) {
-      setError(e.message);
+      setLoadError(e.message);
+      setOrders([]);
+      setCustomers([]);
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -89,7 +98,6 @@ export default function Orders() {
   const resetForm = () => {
     setItems([]);
     setFormErrors({});
-    setError('');
     if (customers.length) setCustomerId(customers[0].id);
   };
 
@@ -100,32 +108,39 @@ export default function Orders() {
       const order = await api.getOrder(orderId);
       setDetailOrder(order);
     } catch (e) {
-      setError(e.message);
+      notifyError(e.message);
     } finally {
       setDetailLoading(false);
     }
   };
 
-  const handleDelete = async (orderId) => {
-    if (!confirm('Cancel/delete this order? Stock will be restored.')) return;
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+    setDeleting(true);
     try {
-      await api.deleteOrder(orderId);
-      setSuccess('Order deleted successfully.');
+      await api.deleteOrder(deleteId);
+      notifySuccess('Order deleted successfully.');
+      setDeleteId(null);
       setDetailOrder(null);
       await load();
       refresh();
     } catch (e) {
-      setError(e.message);
+      notifyError(e.message);
+    } finally {
+      setDeleting(false);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!revalidate(customerId, items)) return;
+    const errors = validateOrderForm(customerId, items, products);
+    setFormErrors(errors);
+    if (hasErrors(errors)) {
+      notifyValidationErrors(errors);
+      return;
+    }
 
     setSaving(true);
-    setError('');
-    setSuccess('');
     try {
       await api.createOrder({
         customer_id: customerId,
@@ -135,11 +150,11 @@ export default function Orders() {
         })),
       });
       resetForm();
-      setSuccess('Order created successfully.');
+      notifySuccess('Order created successfully.');
       await load();
       refresh();
     } catch (err) {
-      setError(err.message);
+      notifyError(err.message);
     } finally {
       setSaving(false);
     }
@@ -149,22 +164,42 @@ export default function Orders() {
     return <LoadingSpinner label="Loading orders…" />;
   }
 
+  if (loadError) {
+    return (
+      <div>
+        <PageHeader title="Orders" subtitle="Create and view customer orders." />
+        <PageStateMessage
+          variant="error"
+          title="Unable to load orders"
+          message={loadError}
+          actionLabel="Try again"
+          onAction={load}
+        />
+      </div>
+    );
+  }
+
   const itemFieldErrors = formErrors.itemErrors || {};
 
   return (
     <div>
       <PageHeader title="Orders" subtitle="Create and view customer orders." />
 
-      <Alert type="success" message={success} onClose={() => setSuccess('')} />
-      <Alert type="error" message={error && !detailOrder ? error : ''} onClose={() => setError('')} />
-
       <div className="max-w-2xl rounded-xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
         <h2 className="mb-6 text-lg font-semibold text-gray-900">Create order</h2>
 
         {customers.length === 0 ? (
-          <p className="text-sm text-gray-500">Add a customer before creating an order.</p>
+          <PageStateMessage
+            variant="empty"
+            title="No data available"
+            message="Add a customer before creating an order."
+          />
         ) : products.length === 0 ? (
-          <p className="text-sm text-gray-500">Add products before creating an order.</p>
+          <PageStateMessage
+            variant="empty"
+            title="No data available"
+            message="Add products before creating an order."
+          />
         ) : (
           <form onSubmit={handleSubmit} noValidate>
             <FloatingSelect
@@ -274,14 +309,16 @@ export default function Orders() {
       <div className="mt-10">
         <h2 className="mb-4 text-base font-semibold text-gray-900">Recent orders</h2>
         {orders.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-gray-300 bg-white py-10 text-center text-sm text-gray-400">
-            No orders yet.
-          </div>
+          <PageStateMessage
+            variant="empty"
+            title="No data available"
+            message="No orders yet. Create your first order above."
+          />
         ) : (
           <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
             <table className="w-full min-w-[600px] text-sm">
               <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
+                <tr className="border-b border-gray-200 bg-gray-100">
                   <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500">ORDER</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500">CUSTOMER</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500">TOTAL</th>
@@ -299,10 +336,10 @@ export default function Orders() {
                       <td className="px-5 py-4 text-gray-700">${Number(o.total_amount).toFixed(2)}</td>
                       <td className="px-5 py-4 text-gray-700">{new Date(o.created_at).toLocaleDateString()}</td>
                       <TableActionCell>
-                        <IconActionButton label="View order" onClick={() => openDetail(o.id)}>
+                        <IconActionButton label="View order" variant="view" onClick={() => openDetail(o.id)}>
                           <FiEye className="h-4 w-4" />
                         </IconActionButton>
-                        <IconActionButton label="Delete order" variant="danger" onClick={() => handleDelete(o.id)}>
+                        <IconActionButton label="Delete order" variant="danger" onClick={() => setDeleteId(o.id)}>
                           <FiTrash2 className="h-4 w-4" />
                         </IconActionButton>
                       </TableActionCell>
@@ -352,13 +389,22 @@ export default function Orders() {
               <Button type="button" variant="secondary" onClick={() => setDetailOrder(null)}>
                 Close
               </Button>
-              <Button type="button" variant="danger" onClick={() => handleDelete(detailOrder.id)}>
+              <Button type="button" variant="danger" onClick={() => setDeleteId(detailOrder.id)}>
                 Delete order
               </Button>
             </div>
           </div>
         ) : null}
       </Modal>
+
+      <ConfirmDeleteModal
+        open={!!deleteId}
+        title="Delete order?"
+        message="This order will be cancelled and stock will be restored to inventory."
+        loading={deleting}
+        onClose={() => setDeleteId(null)}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

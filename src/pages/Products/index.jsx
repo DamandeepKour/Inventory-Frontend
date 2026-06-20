@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { api } from '../../api/client';
-import Alert from '../../components/ui/Alert';
 import Button from '../../components/ui/Button';
+import ConfirmDeleteModal from '../../components/ui/ConfirmDeleteModal';
 import FloatingInput from '../../components/ui/FloatingInput';
 import { IconActionButton } from '../../components/ui/IconActionButton';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import Modal from '../../components/ui/Modal';
 import PageHeader from '../../components/ui/PageHeader';
+import PageStateMessage from '../../components/ui/PageStateMessage';
 import { TableActionCell, TableActionHeader } from '../../components/ui/TableActions';
 import { useRefresh } from '../../context/RefreshContext';
 import { useFormValidation } from '../../hooks/useFormValidation';
+import { notifyError, notifySuccess, notifyValidationErrors } from '../../utils/toast';
 import { validateProductForm } from '../../utils/validation';
 
 const empty = { name: '', sku: '', price: '', quantity: '0' };
@@ -21,19 +23,29 @@ export default function Products() {
   const [form, setForm] = useState(empty);
   const [editingId, setEditingId] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [saving, setSaving] = useState(false);
 
   const validate = useCallback((values) => validateProductForm(values), []);
   const { fieldErrors, validate: runValidation, clearErrors, touchField } = useFormValidation(validate);
 
-  const load = () =>
-    api.getProducts()
-      .then(setProducts)
-      .catch((e) => setError(e.message))
+  const load = () => {
+    setLoading(true);
+    setLoadError('');
+    return api.getProducts()
+      .then((data) => {
+        setProducts(data);
+        setLoadError('');
+      })
+      .catch((e) => {
+        setLoadError(e.message);
+        setProducts([]);
+      })
       .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
     load();
@@ -42,7 +54,6 @@ export default function Products() {
   const openAdd = () => {
     setEditingId(null);
     setForm(empty);
-    setError('');
     clearErrors();
     setModalOpen(true);
   };
@@ -55,7 +66,6 @@ export default function Products() {
       price: String(product.price),
       quantity: String(product.quantity),
     });
-    setError('');
     clearErrors();
     setModalOpen(true);
   };
@@ -64,7 +74,6 @@ export default function Products() {
     setModalOpen(false);
     setEditingId(null);
     setForm(empty);
-    setError('');
     clearErrors();
   };
 
@@ -76,10 +85,13 @@ export default function Products() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!runValidation(form)) return;
+    const { valid, errors } = runValidation(form);
+    if (!valid) {
+      notifyValidationErrors(errors);
+      return;
+    }
 
     setSaving(true);
-    setError('');
     try {
       const payload = {
         name: form.name.trim(),
@@ -89,29 +101,34 @@ export default function Products() {
       };
       if (editingId) {
         await api.updateProduct(editingId, payload);
+        notifySuccess('Product updated successfully.');
       } else {
         await api.createProduct(payload);
+        notifySuccess('Product added successfully.');
       }
       closeModal();
-      setSuccess(editingId ? 'Product updated successfully.' : 'Product added successfully.');
       await load();
       refresh();
     } catch (err) {
-      setError(err.message);
+      notifyError(err.message);
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Delete this product?')) return;
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+    setDeleting(true);
     try {
-      await api.deleteProduct(id);
-      setSuccess('Product deleted successfully.');
+      await api.deleteProduct(deleteId);
+      notifySuccess('Product deleted successfully.');
+      setDeleteId(null);
       await load();
       refresh();
     } catch (err) {
-      setError(err.message);
+      notifyError(err.message);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -121,30 +138,37 @@ export default function Products() {
         title="Products"
         subtitle="Manage your catalog."
         action={
-          <Button type="button" onClick={openAdd}>
-            Add product
-          </Button>
+          !loadError && (
+            <Button type="button" onClick={openAdd}>
+              Add product
+            </Button>
+          )
         }
       />
 
-      {error && !modalOpen && <Alert type="error" message={error} onClose={() => setError('')} />}
-      <Alert type="success" message={success} onClose={() => setSuccess('')} />
-
       {loading ? (
         <LoadingSpinner label="Loading products…" />
+      ) : loadError ? (
+        <PageStateMessage
+          variant="error"
+          title="Unable to load products"
+          message={loadError}
+          actionLabel="Try again"
+          onAction={load}
+        />
       ) : products.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-300 bg-white py-12 text-center">
-          <p className="text-sm font-medium text-gray-600">No products yet</p>
-          <p className="mt-1 text-sm text-gray-400">Add your first product to get started.</p>
-          <Button type="button" onClick={openAdd} className="mt-4">
-            Add product
-          </Button>
-        </div>
+        <PageStateMessage
+          variant="empty"
+          title="No data available"
+          message="No products found. Add your first product to get started."
+          actionLabel="Add product"
+          onAction={openAdd}
+        />
       ) : (
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
           <table className="w-full min-w-[640px] text-sm">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
+              <tr className="border-b border-gray-200 bg-gray-100">
                 <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500">NAME</th>
                 <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500">SKU</th>
                 <th className="px-5 py-3 text-left text-xs font-semibold tracking-wide text-gray-500">PRICE</th>
@@ -160,10 +184,10 @@ export default function Products() {
                   <td className="px-5 py-4 text-gray-700">${Number(p.price).toFixed(2)}</td>
                   <td className="px-5 py-4 text-gray-700">{p.quantity}</td>
                   <TableActionCell>
-                    <IconActionButton label="Edit product" onClick={() => openEdit(p)}>
+                    <IconActionButton label="Edit product" variant="edit" onClick={() => openEdit(p)}>
                       <FiEdit2 className="h-4 w-4" />
                     </IconActionButton>
-                    <IconActionButton label="Delete product" variant="danger" onClick={() => handleDelete(p.id)}>
+                    <IconActionButton label="Delete product" variant="danger" onClick={() => setDeleteId(p.id)}>
                       <FiTrash2 className="h-4 w-4" />
                     </IconActionButton>
                   </TableActionCell>
@@ -222,7 +246,6 @@ export default function Products() {
             error={fieldErrors.quantity}
             required
           />
-          {error && <Alert type="error" message={error} />}
           <div className="flex justify-end gap-3 border-t border-gray-100 pt-4">
             <Button type="button" variant="secondary" onClick={closeModal}>
               Cancel
@@ -233,6 +256,15 @@ export default function Products() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmDeleteModal
+        open={!!deleteId}
+        title="Delete product?"
+        message="This product will be permanently removed from your catalog."
+        loading={deleting}
+        onClose={() => setDeleteId(null)}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

@@ -88,3 +88,25 @@ export function validateOrderForm(customerId, items, products) {
 export function hasErrors(errors) {
   return Object.keys(errors).length > 0;
 }
+
+export function collectErrorMessages(errors) {
+  if (!errors || typeof errors !== 'object') return [];
+
+  const messages = [];
+
+  Object.entries(errors).forEach(([key, value]) => {
+    if (key === 'itemErrors' && value && typeof value === 'object') {
+      Object.values(value).forEach((itemErr) => {
+        if (itemErr && typeof itemErr === 'object') {
+          Object.values(itemErr).forEach((msg) => {
+            if (typeof msg === 'string') messages.push(msg);
+          });
+        }
+      });
+      return;
+    }
+    if (typeof value === 'string') messages.push(value);
+  });
+
+  return messages;
+}

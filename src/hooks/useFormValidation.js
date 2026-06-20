@@ -8,7 +8,7 @@ export function useFormValidation(validateFn) {
     (values) => {
       const errors = validateFn(values);
       setFieldErrors(errors);
-      return !hasErrors(errors);
+      return { valid: !hasErrors(errors), errors };
     },
     [validateFn],
   );
